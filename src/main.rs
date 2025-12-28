@@ -55,6 +55,7 @@ impl eframe::App for MyApp {
             ui.separator();
 
             egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
                 .show(ui, |ui| {
                     ui.label(
                         egui::RichText::new(&self.user_text)
