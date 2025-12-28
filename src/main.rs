@@ -39,12 +39,15 @@ impl eframe::App for MyApp {
                 ui.heading("Editor");
                 ui.separator();
 
-                egui::TextEdit::multiline(&mut self.user_text)
-                    .desired_width(f32::INFINITY)  // Fill available width
-                    .desired_rows(25)
-                    .show(ui);
+                egui::ScrollArea::vertical()
+                    .show(ui, |ui|{
+                        egui::TextEdit::multiline(&mut self.user_text)
+                            .desired_width(f32::INFINITY)  // Fill available width
+                            .desired_rows(100)
+                            .show(ui);
 
-                ui.label(format!("Characters: {}", self.user_text.len()));
+                        ui.label(format!("Characters: {}", self.user_text.len()));
+                    });
             });
         
         egui::CentralPanel::default().show(ctx, |ui| {
