@@ -1,4 +1,6 @@
 use eframe::egui;
+use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
+
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -57,12 +59,128 @@ impl eframe::App for MyApp {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
-                    ui.label(
-                        egui::RichText::new(&self.user_text)
-                            .size(14.0)
-                    );
+                    self.render_markdown(ui);
                 });
         });
 
     }
+}
+
+impl  MyApp {
+
+    fn render_markdown(&self, ui: &mut egui::Ui) {
+        let parser = Parser::new(&self.user_text);
+
+        let mut in_heading = false;
+        let mut heading_level = 1;
+        let mut in_emphasis = false;
+        let mut in_strong = false;
+        let mut in_paragraph = false;
+        let mut text_parts: Vec<egui::RichText> = Vec::new();
+        
+        for event in parser {
+            match event {
+                Event::Start(Tag::Heading { level, .. }) => {
+                    in_heading = true;
+                    heading_level = match level {
+                        HeadingLevel::H1 => 1,
+                        HeadingLevel::H2 => 2,
+                        HeadingLevel::H3 => 3,
+                        HeadingLevel::H4 => 4,
+                        HeadingLevel::H5 => 5,
+                        HeadingLevel::H6 => 6,
+                    };
+                }
+
+                Event::End(TagEnd::Heading{..}) => {
+                    in_heading = false;
+                    ui.add_space(10.0); // space after heading
+                }
+
+                Event::Start(Tag::Paragraph) => {
+                    in_paragraph = true;
+                    text_parts.clear();
+                }
+                
+                Event::Start(Tag::Emphasis) => {
+                    in_emphasis = true;
+                }
+
+                Event::End(TagEnd::Emphasis) => {
+                    in_emphasis = false;
+                }
+
+                Event::Start(Tag::Strong) => {
+                    in_strong = true;
+                }
+
+                Event::End(TagEnd::Strong) => {
+                    in_strong = false;
+                }
+
+                Event::End(TagEnd::Paragraph) => {
+                    // Render accumulated text parts in one line
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 0.0;
+                        for part in &text_parts {
+                            ui.label(part.clone());
+                        }
+                    });
+                    text_parts.clear();
+                    in_paragraph = false;
+                    ui.add_space(8.0);
+                }
+
+                Event::Text(text) => {
+                    let mut rich_text = egui::RichText::new(text.as_ref());
+
+                    if in_heading {
+                        let size = match heading_level {
+                            1 => 32.0,
+                            2 => 28.0,
+                            3 => 24.0,
+                            4 => 20.0,
+                            5 => 16.0,
+                            _ => 14.0,
+                        };
+                        rich_text = rich_text.size(size).strong();
+                    } else {
+                        rich_text = rich_text.size(14.0); // default size
+                    }
+
+                    if in_emphasis {
+                        rich_text = rich_text.italics();
+                    }
+
+                    if in_strong {
+                        rich_text = rich_text.strong();
+                    }
+
+                    if in_paragraph {
+                        text_parts.push(rich_text);
+                    } else {
+                        ui.label(rich_text);
+                    }
+                }
+
+                Event::Code(code) => {
+                    let code_text = egui::RichText::new(code.as_ref())
+                        .monospace()
+                        .background_color(egui::Color32::from_rgb(40, 40, 40));
+                    
+                    if in_paragraph {
+                        text_parts.push(code_text);
+                    } else {
+                        ui.label(code_text);
+                    }
+                }
+
+                _ => {}
+                
+            }
+
+
+        }
+    }
+    
 }
