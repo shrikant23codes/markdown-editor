@@ -77,6 +77,8 @@ impl  MyApp {
         let mut in_strong = false;
         let mut in_paragraph = false;
         let mut text_parts: Vec<egui::RichText> = Vec::new();
+        let mut in_list = false;
+        let mut in_list_item = false;
         
         for event in parser {
             match event {
@@ -118,6 +120,33 @@ impl  MyApp {
                     in_strong = false;
                 }
 
+                Event::Start(Tag::List(_)) => {
+                    in_list = true;
+                }
+
+                Event::End(TagEnd::List(_)) => {
+                    in_list = false;
+                    ui.add_space(8.0);
+                }
+
+                Event::Start(Tag::Item) => {
+                    in_list_item = true;
+                    text_parts.clear();
+                }
+
+                Event::End(TagEnd::Item) => {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(egui::RichText::new("• ").size(14.0));
+
+                        for part in &text_parts {
+                            ui.label(part.clone());
+                        }
+                    });
+
+                    in_list_item = false;
+                    text_parts.clear();
+                }
+
                 Event::End(TagEnd::Paragraph) => {
                     // Render accumulated text parts in one line
                     ui.horizontal_wrapped(|ui| {
@@ -156,7 +185,7 @@ impl  MyApp {
                         rich_text = rich_text.strong();
                     }
 
-                    if in_paragraph {
+                    if in_paragraph || in_list_item{
                         text_parts.push(rich_text);
                     } else {
                         ui.label(rich_text);
@@ -168,7 +197,7 @@ impl  MyApp {
                         .monospace()
                         .background_color(egui::Color32::from_rgb(40, 40, 40));
                     
-                    if in_paragraph {
+                    if in_paragraph  || in_list_item{
                         text_parts.push(code_text);
                     } else {
                         ui.label(code_text);
