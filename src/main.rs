@@ -79,6 +79,9 @@ impl  MyApp {
         let mut text_parts: Vec<egui::RichText> = Vec::new();
         let mut in_list = false;
         let mut in_list_item = false;
+        let mut in_code_block = false;
+        let mut code_block_text = String::new();
+
         
         for event in parser {
             match event {
@@ -147,6 +150,29 @@ impl  MyApp {
                     text_parts.clear();
                 }
 
+                Event::Start(Tag::CodeBlock(_)) => {
+                    in_code_block = true;
+                    code_block_text.clear();
+                }
+
+                Event::End(TagEnd::CodeBlock) => {
+                    // So a debug log to see if this is being triggered
+                    in_code_block = false;
+                    egui::Frame::none()
+                        .fill(egui::Color32::from_rgb(32, 32, 32))
+                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(64, 64, 64)))
+                        .inner_margin(10.0)
+                        .show(ui, |ui| {
+                            ui.label(
+                                egui::RichText::new(&code_block_text)
+                                    .monospace()
+                                    .color(egui::Color32::from_rgb(200, 200, 200)),
+                            )
+                        });
+                    
+                    ui.add_space(10.0);
+                }
+
                 Event::End(TagEnd::Paragraph) => {
                     // Render accumulated text parts in one line
                     ui.horizontal_wrapped(|ui| {
@@ -161,34 +187,39 @@ impl  MyApp {
                 }
 
                 Event::Text(text) => {
-                    let mut rich_text = egui::RichText::new(text.as_ref());
-
-                    if in_heading {
-                        let size = match heading_level {
-                            1 => 32.0,
-                            2 => 28.0,
-                            3 => 24.0,
-                            4 => 20.0,
-                            5 => 16.0,
-                            _ => 14.0,
-                        };
-                        rich_text = rich_text.size(size).strong();
+                    if in_code_block {
+                        code_block_text.push_str(&text);
+                        
                     } else {
-                        rich_text = rich_text.size(14.0); // default size
-                    }
+                        let mut rich_text = egui::RichText::new(text.as_ref());
 
-                    if in_emphasis {
-                        rich_text = rich_text.italics();
-                    }
+                        if in_heading {
+                            let size = match heading_level {
+                                1 => 32.0,
+                                2 => 28.0,
+                                3 => 24.0,
+                                4 => 20.0,
+                                5 => 16.0,
+                                _ => 14.0,
+                            };
+                            rich_text = rich_text.size(size).strong();
+                        } else {
+                            rich_text = rich_text.size(14.0); // default size
+                        }
 
-                    if in_strong {
-                        rich_text = rich_text.strong();
-                    }
+                        if in_emphasis {
+                            rich_text = rich_text.italics();
+                        }
 
-                    if in_paragraph || in_list_item{
-                        text_parts.push(rich_text);
-                    } else {
-                        ui.label(rich_text);
+                        if in_strong {
+                            rich_text = rich_text.strong();
+                        }
+
+                        if in_paragraph || in_list_item {
+                            text_parts.push(rich_text);
+                        } else {
+                            ui.label(rich_text);
+                        }
                     }
                 }
 
