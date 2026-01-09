@@ -1,6 +1,6 @@
 use eframe::egui;
 use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
-
+use ropey::Rope;
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -19,7 +19,7 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 struct MyApp {
-    user_text: String,
+    user_text: Rope,
     scroll_offset: f32,
 
 }
@@ -27,7 +27,7 @@ struct MyApp {
 impl Default for MyApp {
     fn default() -> Self {
         Self {
-            user_text: String::from("Type something here..."),
+            user_text: Rope::from_str("Type something here..."),
             scroll_offset: 0.0,
         }
     }
@@ -39,19 +39,26 @@ impl eframe::App for MyApp {
 
         egui::SidePanel::left("editor_panel")
             .exact_width(ctx.screen_rect().width() / 2.0)
+            .resizable(false)
             .show(ctx, |ui| {
                 ui.heading("Editor");
                 ui.separator();
 
-                let scroll_output =  egui::ScrollArea::vertical()
+                let scroll_output = egui::ScrollArea::vertical()
+                    .auto_shrink([false, false])
                     .scroll_offset(egui::Vec2::new(0.0, self.scroll_offset))
                     .show(ui, |ui|{
-                        egui::TextEdit::multiline(&mut self.user_text)
+                        let mut text_string = self.user_text.to_string();
+                        let response = egui::TextEdit::multiline(&mut text_string)
                             .desired_width(f32::INFINITY)  // Fill available width
                             .desired_rows(100)
                             .show(ui);
 
-                        ui.label(format!("Characters: {}", self.user_text.len()));
+                        if response.response.changed() {
+                            self.user_text = Rope::from_str(&text_string)
+                        }
+
+                        ui.label(format!("Characters: {}", self.user_text.len_chars()));
                     });
                 self.scroll_offset = scroll_output.state.offset.y;
             });
@@ -75,7 +82,8 @@ impl eframe::App for MyApp {
 impl  MyApp {
 
     fn render_markdown(&self, ui: &mut egui::Ui) {
-        let parser = Parser::new(&self.user_text);
+        let preview_text = self.user_text.to_string();
+        let parser = Parser::new(&preview_text);
 
         let mut in_heading = false;
         let mut heading_level = 1;
