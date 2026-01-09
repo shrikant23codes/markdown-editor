@@ -15,6 +15,11 @@
 
 ## To implement
 
+- Code blocks (quick win) = Done
+- Rope data structure (foundation for performance) = Done -- Need to test performance with large files
+- File operations (makes it usable)
+- Syntax highlighting in editor (nice to have)
+- Spell checking (the big feature)
 
 
 ## Approach:
