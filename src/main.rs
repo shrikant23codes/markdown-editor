@@ -84,6 +84,7 @@ impl  MyApp {
 
         
         for event in parser {
+            // eprintln!("{:?}", event);
             match event {
                 Event::Start(Tag::Heading { level, .. }) => {
                     in_heading = true;
@@ -174,16 +175,19 @@ impl  MyApp {
                 }
 
                 Event::End(TagEnd::Paragraph) => {
-                    // Render accumulated text parts in one line
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing.x = 0.0;
-                        for part in &text_parts {
-                            ui.label(part.clone());
-                        }
-                    });
-                    text_parts.clear();
+                    // Only render paragraph if we're not in a list item
+                    // (list items will render the paragraph content themselves)
+                    if !in_list_item {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing.x = 0.0;
+                            for part in &text_parts {
+                                ui.label(part.clone());
+                            }
+                        });
+                        text_parts.clear();
+                        ui.add_space(8.0);
+                    }
                     in_paragraph = false;
-                    ui.add_space(8.0);
                 }
 
                 Event::Text(text) => {
