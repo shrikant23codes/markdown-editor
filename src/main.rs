@@ -21,13 +21,16 @@ fn main() -> Result<(), eframe::Error> {
 struct MyApp {
     user_text: Rope,
     scroll_offset: f32,
+    cached_string: String,
 
 }
 
 impl Default for MyApp {
     fn default() -> Self {
+        let initial_text = "Type something here...";
         Self {
-            user_text: Rope::from_str("Type something here..."),
+            user_text: Rope::from_str(initial_text),
+            cached_string: initial_text.to_string(),
             scroll_offset: 0.0,
         }
     }
@@ -48,14 +51,14 @@ impl eframe::App for MyApp {
                     .auto_shrink([false, false])
                     .scroll_offset(egui::Vec2::new(0.0, self.scroll_offset))
                     .show(ui, |ui|{
-                        let mut text_string = self.user_text.to_string();
-                        let response = egui::TextEdit::multiline(&mut text_string)
+                        // let mut text_string = self.user_text.to_string();
+                        let response = egui::TextEdit::multiline(&mut self.cached_string)
                             .desired_width(f32::INFINITY)  // Fill available width
                             .desired_rows(100)
                             .show(ui);
 
                         if response.response.changed() {
-                            self.user_text = Rope::from_str(&text_string)
+                            self.user_text = Rope::from_str(&self.cached_string);
                         }
 
                         ui.label(format!("Characters: {}", self.user_text.len_chars()));
@@ -82,8 +85,7 @@ impl eframe::App for MyApp {
 impl  MyApp {
 
     fn render_markdown(&self, ui: &mut egui::Ui) {
-        let preview_text = self.user_text.to_string();
-        let parser = Parser::new(&preview_text);
+        let parser = Parser::new(&self.cached_string);
 
         let mut in_heading = false;
         let mut heading_level = 1;
