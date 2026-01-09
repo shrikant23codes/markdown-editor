@@ -20,6 +20,7 @@ fn main() -> Result<(), eframe::Error> {
 
 struct MyApp {
     user_text: String,
+    scroll_offset: f32,
 
 }
 
@@ -27,6 +28,7 @@ impl Default for MyApp {
     fn default() -> Self {
         Self {
             user_text: String::from("Type something here..."),
+            scroll_offset: 0.0,
         }
     }
 }
@@ -41,7 +43,8 @@ impl eframe::App for MyApp {
                 ui.heading("Editor");
                 ui.separator();
 
-                egui::ScrollArea::vertical()
+                let scroll_output =  egui::ScrollArea::vertical()
+                    .scroll_offset(egui::Vec2::new(0.0, self.scroll_offset))
                     .show(ui, |ui|{
                         egui::TextEdit::multiline(&mut self.user_text)
                             .desired_width(f32::INFINITY)  // Fill available width
@@ -50,17 +53,20 @@ impl eframe::App for MyApp {
 
                         ui.label(format!("Characters: {}", self.user_text.len()));
                     });
+                self.scroll_offset = scroll_output.state.offset.y;
             });
         
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Preview");
             ui.separator();
 
-            egui::ScrollArea::vertical()
+            let scroll_output = egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
+                .scroll_offset(egui::Vec2::new(0.0, self.scroll_offset))
                 .show(ui, |ui| {
                     self.render_markdown(ui);
                 });
+            self.scroll_offset = scroll_output.state.offset.y;
         });
 
     }
