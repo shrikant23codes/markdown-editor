@@ -1,6 +1,9 @@
 use eframe::egui;
 use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
 
+mod rope_editor;
+use crate::rope_editor::RopeEditor;
+
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -18,17 +21,21 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 struct MyApp {
-    user_text: String,
+    editor: RopeEditor,
     scroll_offset: f32,
-
+    cached_string: String,
+    cache_version: u64,
 }
 
 impl Default for MyApp {
     fn default() -> Self {
         let initial_text = "Type something here...";
+        let editor = RopeEditor::new(initial_text);
         Self {
-            user_text: initial_text.to_string(),
+            editor,
             scroll_offset: 0.0,
+            cached_string: initial_text.to_string(),
+            cache_version: 0,
         }
     }
 }
@@ -48,13 +55,23 @@ impl eframe::App for MyApp {
                     .auto_shrink([false, false])
                     .scroll_offset(egui::Vec2::new(0.0, self.scroll_offset))
                     .show(ui, |ui|{
+                        self.sync_ui_cache();
+
+                        let mut temp_text = self.cached_string.clone();
+
                         // let mut text_string = self.user_text.to_string();
-                        egui::TextEdit::multiline(&mut self.user_text)
+                        let response = egui::TextEdit::multiline(&mut temp_text)
                             .desired_width(f32::INFINITY)  // Fill available width
                             .desired_rows(100)
                             .show(ui);
 
-                        ui.label(format!("Characters: {}", self.user_text.chars().count()));
+                        if response.response.changed() {
+                            self.editor.apply_edits(&temp_text);
+                            self.cached_string = temp_text;
+                            self.cache_version = self.editor.version();
+                        }
+
+                        ui.label(format!("Characters: {}", self.editor.len_chars()));
                     });
                 self.scroll_offset = scroll_output.state.offset.y;
             });
@@ -62,6 +79,8 @@ impl eframe::App for MyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Preview");
             ui.separator();
+
+            self.sync_ui_cache();
 
             let scroll_output = egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
@@ -76,9 +95,16 @@ impl eframe::App for MyApp {
 }
 
 impl  MyApp {
+    // Sync UI cache with editor content
+    fn sync_ui_cache(&mut self) {
+        if self.cache_version != self.editor.version() {
+            self.cached_string = self.editor.get_text();
+            self.cache_version = self.editor.version();
+        }
+    }
 
     fn render_markdown(&self, ui: &mut egui::Ui) {
-        let parser = Parser::new(&self.user_text);
+        let parser = Parser::new(&self.cached_string);
 
         let mut in_heading = false;
         let mut heading_level = 1;

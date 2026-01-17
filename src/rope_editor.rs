@@ -21,6 +21,10 @@ impl RopeEditor {
         self.rope.to_string()
     }
 
+    pub fn version(&self) -> u64 {
+        self.version
+    }
+
     pub fn len_chars(&self) -> usize {
         self.rope.len_chars()
     }
