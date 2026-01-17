@@ -1,6 +1,5 @@
 use eframe::egui;
 use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
-use ropey::Rope;
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -19,9 +18,8 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 struct MyApp {
-    user_text: Rope,
+    user_text: String,
     scroll_offset: f32,
-    cached_string: String,
 
 }
 
@@ -29,8 +27,7 @@ impl Default for MyApp {
     fn default() -> Self {
         let initial_text = "Type something here...";
         Self {
-            user_text: Rope::from_str(initial_text),
-            cached_string: initial_text.to_string(),
+            user_text: initial_text.to_string(),
             scroll_offset: 0.0,
         }
     }
@@ -52,16 +49,12 @@ impl eframe::App for MyApp {
                     .scroll_offset(egui::Vec2::new(0.0, self.scroll_offset))
                     .show(ui, |ui|{
                         // let mut text_string = self.user_text.to_string();
-                        let response = egui::TextEdit::multiline(&mut self.cached_string)
+                        egui::TextEdit::multiline(&mut self.user_text)
                             .desired_width(f32::INFINITY)  // Fill available width
                             .desired_rows(100)
                             .show(ui);
 
-                        if response.response.changed() {
-                            self.user_text = Rope::from_str(&self.cached_string);
-                        }
-
-                        ui.label(format!("Characters: {}", self.user_text.len_chars()));
+                        ui.label(format!("Characters: {}", self.user_text.chars().count()));
                     });
                 self.scroll_offset = scroll_output.state.offset.y;
             });
@@ -85,7 +78,7 @@ impl eframe::App for MyApp {
 impl  MyApp {
 
     fn render_markdown(&self, ui: &mut egui::Ui) {
-        let parser = Parser::new(&self.cached_string);
+        let parser = Parser::new(&self.user_text);
 
         let mut in_heading = false;
         let mut heading_level = 1;
